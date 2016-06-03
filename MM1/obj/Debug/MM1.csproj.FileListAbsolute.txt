@@ -1,0 +1,5 @@
+I:\UTN\Simulación\Programa\MM1\MM1\MM1\bin\Debug\MM1.exe.config
+I:\UTN\Simulación\Programa\MM1\MM1\MM1\bin\Debug\MM1.exe
+I:\UTN\Simulación\Programa\MM1\MM1\MM1\bin\Debug\MM1.pdb
+I:\UTN\Simulación\Programa\MM1\MM1\MM1\obj\Debug\MM1.exe
+I:\UTN\Simulación\Programa\MM1\MM1\MM1\obj\Debug\MM1.pdb
