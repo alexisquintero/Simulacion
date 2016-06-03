@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
+using ExcelLibrary.SpreadSheet;
+using ExcelLibrary.CompoundDocumentFormat;
 
 namespace MM1
 {
@@ -27,6 +28,12 @@ namespace MM1
         private double deltaClientesEnCola;     //delta: número promedio o área bajo X(t); X siendo genérico
         private double deltaClientesEnSistema;
         private int nroClientesAtendidos;
+
+        //Excel
+        private string file;
+        private Workbook workbook;
+        private Worksheet worksheet;
+        private int fila;
 
         public void programa()  //Programa principal
         {
@@ -65,7 +72,26 @@ namespace MM1
             this.listaProxEvento[(int)eventos.Arribo] = new Arribo(reloj + generador.generarArribo());
             //poner al tiempo de partida en infinito
             this.listaProxEvento[(int)eventos.Partida] = new Partida(finSimulacion * 2);
-  
+
+            //Archivo Excel
+            fila = 5;
+            file = "Simulacion.xls"; //Nombre del archivo
+            workbook = new Workbook();
+            worksheet = new Worksheet("Primer pagina");
+            //Formato del archivo
+            worksheet.Cells[0, 0] = new Cell("Simulacion de sistema MM1");
+            worksheet.Cells[0, 1] = new Cell("Lambda = " + this.lambda);
+            worksheet.Cells[0, 2] = new Cell("Mu = " + this.mu);
+            worksheet.Cells[0, 3] = new Cell("Tiempo final de la simulacion = " + this.finSimulacion);
+
+            worksheet.Cells[4, 0] = new Cell("Reloj");  //En las primeras 5 rows van las medidas de rendimiento    
+            worksheet.Cells[4, 1] = new Cell("Estado del servidor");
+            worksheet.Cells[4, 2] = new Cell("Cantidad de clientes en el sistema");
+            worksheet.Cells[4, 3] = new Cell("Cantidad de clientes en cola");
+            worksheet.Cells[4, 4] = new Cell("Tiempo promedio en el sistema");
+            worksheet.Cells[4, 5] = new Cell("Tiempo promedio en cola");
+            worksheet.Cells[4, 6] = new Cell("Clientes atendidos");
+
         }
         private void tiempos()
         {
@@ -80,6 +106,15 @@ namespace MM1
 //            this.tiempoUltimoEvento = this.reloj;   //Comentado porque se cambia en las rutinas de los eventos
             this.reloj = this.listaProxEvento[(int)this.proxEvento].tiempo; //Actualiza el reloj
 
+            //Datos para la Spreadsheet
+            worksheet.Cells[fila, 0] = new Cell(this.reloj);
+            worksheet.Cells[fila, 1] = new Cell(this.estadoServidor.ToString());
+            worksheet.Cells[fila, 2] = new Cell(this.cantidadClientesSistema);
+            worksheet.Cells[fila, 3] = new Cell(this.cantidadClientesCola);
+            worksheet.Cells[fila, 4] = new Cell(this.deltaClientesEnSistema / this.nroClientesAtendidos);
+            worksheet.Cells[fila, 5] = new Cell(this.deltaClientesEnCola / this.nroClientesAtendidos);
+            worksheet.Cells[fila, 6] = new Cell(this.nroClientesAtendidos);
+            fila++;
         }
         private void reporte()
         {
@@ -87,9 +122,12 @@ namespace MM1
             Console.WriteLine("Utilización del servidor: {0}", this.utilizacionDelServidor/this.finSimulacion );
             Console.WriteLine("Tiempo promedio en cola : {0}", this.deltaClientesEnCola/this.nroClientesAtendidos);
             Console.WriteLine("Tiempo promedio en el sistema: {0}", this.deltaClientesEnSistema / this.nroClientesAtendidos);
-            Console.WriteLine("Clientes atendidos: {0}", this.nroClientesAtendidos);
-            Console.Read();
+            Console.WriteLine("Clientes atendidos: {0}", this.nroClientesAtendidos);            
 
+            workbook.Worksheets.Add(worksheet);
+            workbook.Save(file);    //Crea el archivo
+
+            Console.Read();
         }
         private void arribo()
         {
