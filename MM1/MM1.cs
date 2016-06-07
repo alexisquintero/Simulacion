@@ -67,7 +67,7 @@ namespace MM1
         private void inicializacion()
         {
             this.reloj = 0;
-            this.finSimulacion = 1000000;
+            this.finSimulacion = 500000;
             this.lambda = 0.02;
             this.mu = 0.08;
             this.estadoServidor = estadoDelServidor.Desocupado;
@@ -133,7 +133,9 @@ namespace MM1
             worksheet.Cells.ColumnWidth[8] = 12000;
             worksheet.Cells.ColumnWidth[9] = 12000;
 
-            worksheet.Cells[fila, columnaNroPromClientesSistema + 10] = new Cell("E[X^2] de número de clientes en sistema");
+            worksheet.Cells[fila, columnaNroPromClientesSistema + 10] = new Cell("X");
+            worksheet.Cells.ColumnWidth[17] = 12000;
+            worksheet.Cells[fila, columnaNroPromClientesSistema + 11] = new Cell("Varianza de nro. prom. de clietnes en sistema");
             worksheet.Cells.ColumnWidth[17] = 12000;
             fila = 5;
         }
@@ -177,6 +179,8 @@ namespace MM1
             double probUnClienteSistema = this.tiempoSoloUnClienteSistema / this.reloj;
             Console.WriteLine("Probabilidad de que haya 1 cliente en el sistema: {0}", probUnClienteSistema);
             worksheet.Cells[1, 7] = new Cell("Probabilidad de que haya 1 cliente en el sistema: " + probUnClienteSistema.ToString());
+
+            this.calcularVarianza();    //Comentar para disminuir el tiempo de procesamiento
 
             workbook.Worksheets.Add(worksheet);
             workbook.Save(file);    //Crea el archivo
@@ -255,12 +259,27 @@ namespace MM1
             worksheet.Cells[fila, columnaNroPromClientesCola] = new Cell(this.nroPromedioClientesCola / this.reloj);
 
             //E[X^2]    restarle E[X]^2, que sería: R6 - H6^2
-            worksheet.Cells[fila, columnaNroPromClientesSistema + 10] = new Cell((this.nroPromedioClientesSistema * this.nroPromedioClientesSistema) / this.reloj);
+            //            worksheet.Cells[fila, columnaNroPromClientesSistema + 10] = new Cell((this.nroPromedioClientesSistema * this.nroPromedioClientesSistema) / this.reloj);
+            worksheet.Cells[fila, columnaNroPromClientesSistema + 10] = new Cell((this.reloj - this.tiempoUltimoEvento) * this.cantidadClientesSistema);
 
             //Probabilidad de que haya 1 cliente en el sistema
             //Tiempo en que hay 1 cliente en el sistema dividido el reloj de la simulación
             worksheet.Cells[fila, columnaProbabilidadUnClienteSistema] = new Cell(this.tiempoSoloUnClienteSistema / this.reloj);
             fila++;
+        }
+        private void calcularVarianza()
+        {
+            for(int i = 5; i < fila; i++)
+            {
+                double varianza = 0;
+                int j = 0;
+                for (j = 5; j <= i; j++)
+                {
+                    varianza += Math.Pow((double)worksheet.Cells[j, columnaNroPromClientesSistema + 10].Value - (double)worksheet.Cells[j, columnaNroPromClientesSistema].Value, 2);
+                }
+                varianza = varianza / j;
+                worksheet.Cells[i, 18] = new Cell(varianza);
+            }
         }
 
     }
