@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using ExcelLibrary.SpreadSheet;
-using ExcelLibrary.CompoundDocumentFormat;
 
 namespace MM1
 {
@@ -12,7 +11,7 @@ namespace MM1
 
         private double reloj;
         private double finSimulacion;
-        private Evento[] listaProxEvento = new Evento[2];   //Uso la enumeración eventos como ínidice
+        private Evento[] listaProxEvento = new Evento[2];   //Uso la enumeración eventos como índice
         private eventos proxEvento; 
         private double lambda;
         private double mu;
@@ -22,6 +21,10 @@ namespace MM1
         private Queue<Arribo> cola = new Queue<Arribo>();
         private GeneradorDeTiempos generador;
         private double tiempoUltimoEvento;
+        private double porcentajeTiempoAsentamiento;    //Se usa para determinar el tiempo de asentamiento con
+        private double valorPorcentajeTiempoAsentamiento;
+        private double valorFinal1ClienteEnSistema;     //un cliente en el sistema
+        private double tiempoAsentamientoUnClienteSistema;
 
         //Medidas de rendimiento
         private double utilizacionDelServidor;
@@ -47,6 +50,7 @@ namespace MM1
         private int columnaNroPromClientesSistema;
         private int columnaNroPromClientesCola;
         private int columnaProbabilidadUnClienteSistema;
+        private int columnaVarianza;
 
         public void programa()  //Programa principal
         {
@@ -67,7 +71,7 @@ namespace MM1
         private void inicializacion()
         {
             this.reloj = 0;
-            this.finSimulacion = 500000;
+            this.finSimulacion = 100000;
             this.lambda = 0.02;
             this.mu = 0.08;
             this.estadoServidor = estadoDelServidor.Desocupado;
@@ -83,6 +87,10 @@ namespace MM1
             this.nroPromedioClientesSistema = 0;
             this.nroPromedioClientesCola = 0;
             this.tiempoSoloUnClienteSistema = 0;
+            this.valorPorcentajeTiempoAsentamiento = 0.05;  //Uso 5% del valor final
+            this.valorFinal1ClienteEnSistema = (this.lambda / this.mu) * (1 - this.lambda / this.mu);   //0.25*0.75=0.1875
+            this.porcentajeTiempoAsentamiento = this.valorFinal1ClienteEnSistema * this.valorPorcentajeTiempoAsentamiento;   
+            this.tiempoAsentamientoUnClienteSistema = 0;
 
             //Generar Arribo
             this.listaProxEvento[(int)eventos.Arribo] = new Arribo(reloj + generador.generarArribo());
@@ -100,6 +108,7 @@ namespace MM1
             columnaNroPromClientesSistema = 7;
             columnaNroPromClientesCola = 8;
             columnaProbabilidadUnClienteSistema = 9;
+            columnaVarianza = 18;
 
             fila = 0;
             file = "Simulacion.xls"; //Nombre del archivo
@@ -110,6 +119,7 @@ namespace MM1
             worksheet.Cells[fila, 1] = new Cell("Lambda = " + this.lambda);
             worksheet.Cells[fila, 2] = new Cell("Mu = " + this.mu);
             worksheet.Cells[fila, 3] = new Cell("Tiempo final de la simulacion = " + this.finSimulacion);
+            
             //En las primeras 5 rows van las medidas de rendimiento 
             fila = 4;
             worksheet.Cells[fila, columnaReloj] = new Cell("Reloj");     
@@ -122,6 +132,7 @@ namespace MM1
             worksheet.Cells[fila, columnaNroPromClientesSistema] = new Cell("Número promedio de clientes en el sistema");
             worksheet.Cells[fila, columnaNroPromClientesCola] = new Cell("Número promedio de clientes en cola");
             worksheet.Cells[fila, columnaProbabilidadUnClienteSistema] = new Cell("Probabilidad de que haya 1 cliente en el sistema");
+            worksheet.Cells[fila, columnaVarianza] = new Cell("Varianza del promedio de clientes en el sistema");
             worksheet.Cells.ColumnWidth[0] = 12000;
             worksheet.Cells.ColumnWidth[1] = 12000;
             worksheet.Cells.ColumnWidth[2] = 12000;
@@ -132,10 +143,11 @@ namespace MM1
             worksheet.Cells.ColumnWidth[7] = 12000;
             worksheet.Cells.ColumnWidth[8] = 12000;
             worksheet.Cells.ColumnWidth[9] = 12000;
+            worksheet.Cells.ColumnWidth[18] = 12000;
 
             worksheet.Cells[fila, columnaNroPromClientesSistema + 10] = new Cell("X");
             worksheet.Cells.ColumnWidth[17] = 12000;
-            worksheet.Cells[fila, columnaNroPromClientesSistema + 11] = new Cell("Varianza de nro. prom. de clietnes en sistema");
+            worksheet.Cells[fila, columnaNroPromClientesSistema + 11] = new Cell("Varianza de nro. prom. de clientes en sistema");
             worksheet.Cells.ColumnWidth[17] = 12000;
             fila = 5;
         }
@@ -179,6 +191,10 @@ namespace MM1
             double probUnClienteSistema = this.tiempoSoloUnClienteSistema / this.reloj;
             Console.WriteLine("Probabilidad de que haya 1 cliente en el sistema: {0}", probUnClienteSistema);
             worksheet.Cells[1, 7] = new Cell("Probabilidad de que haya 1 cliente en el sistema: " + probUnClienteSistema.ToString());
+            Console.WriteLine("Tiempo de asentamiento de la prob. de 1 cliente en el sistema: {0}", this.tiempoAsentamientoUnClienteSistema);
+            worksheet.Cells[2, 0] = new Cell("Tiempo de asentamiento de la prob. de 1 cliente en el sistema: " + this.tiempoAsentamientoUnClienteSistema);
+            Console.WriteLine("Bandas para el tiempo de asentamiento de la prob. de 1 cliente en el sistema: \u00B1{0}", this.valorPorcentajeTiempoAsentamiento.ToString("P"));
+            worksheet.Cells[2, 2] = new Cell("Bandas para el tiempo de asentamiento de la prob. de 1 cliente en el sistema: \u00B1" + this.valorPorcentajeTiempoAsentamiento.ToString("P"));
 
             this.calcularVarianza();    //Comentar para disminuir el tiempo de procesamiento
 
@@ -264,14 +280,26 @@ namespace MM1
 
             //Probabilidad de que haya 1 cliente en el sistema
             //Tiempo en que hay 1 cliente en el sistema dividido el reloj de la simulación
-            worksheet.Cells[fila, columnaProbabilidadUnClienteSistema] = new Cell(this.tiempoSoloUnClienteSistema / this.reloj);
+            double probabilidadUnClienteSistema = this.tiempoSoloUnClienteSistema / this.reloj;
+            worksheet.Cells[fila, columnaProbabilidadUnClienteSistema] = new Cell(probabilidadUnClienteSistema);
+
+            //Calculo de tiempo de asentamiento
+            if((probabilidadUnClienteSistema <= this.valorFinal1ClienteEnSistema + this.porcentajeTiempoAsentamiento) && (probabilidadUnClienteSistema >= this.valorFinal1ClienteEnSistema - this.porcentajeTiempoAsentamiento))
+            {
+                this.tiempoAsentamientoUnClienteSistema = this.tiempoAsentamientoUnClienteSistema == 0 ? this.reloj : this.tiempoAsentamientoUnClienteSistema;
+            }
+            else
+            {
+                this.tiempoAsentamientoUnClienteSistema = 0;
+            }
+
             fila++;
         }
         private void calcularVarianza()
         {
-            for(int i = 5; i < fila; i++)
-            {
-                double varianza = 0;
+            double varianza = 0;
+            for (int i = 5; i < fila; i++)
+            {                
                 int j = 0;
                 for (j = 5; j <= i; j++)
                 {
@@ -280,6 +308,7 @@ namespace MM1
                 varianza = varianza / j;
                 worksheet.Cells[i, 18] = new Cell(varianza);
             }
+            Console.WriteLine("Varianza del número promedio de clientes en el sistema: {0}", varianza);
         }
 
     }
