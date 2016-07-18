@@ -34,6 +34,7 @@ namespace MM1
         private double nroPromedioClientesSistema;
         private double nroPromedioClientesCola;
         private double tiempoSoloUnClienteSistema;
+        private double varianzaClientesSistema;
 
         //Excel
         private string file;
@@ -91,6 +92,7 @@ namespace MM1
             this.valorFinal1ClienteEnSistema = (this.lambda / this.mu) * (1 - this.lambda / this.mu);   //0.25*0.75=0.1875
             this.porcentajeTiempoAsentamiento = this.valorFinal1ClienteEnSistema * this.valorPorcentajeTiempoAsentamiento;   
             this.tiempoAsentamientoUnClienteSistema = 0;
+            this.varianzaClientesSistema = 0;
 
             //Generar Arribo
             this.listaProxEvento[(int)eventos.Arribo] = new Arribo(reloj + generador.generarArribo());
@@ -108,7 +110,7 @@ namespace MM1
             columnaNroPromClientesSistema = 7;
             columnaNroPromClientesCola = 8;
             columnaProbabilidadUnClienteSistema = 9;
-            columnaVarianza = 18;
+            columnaVarianza = 10;
 
             fila = 0;
             file = "Simulacion.xls"; //Nombre del archivo
@@ -143,12 +145,11 @@ namespace MM1
             worksheet.Cells.ColumnWidth[7] = 12000;
             worksheet.Cells.ColumnWidth[8] = 12000;
             worksheet.Cells.ColumnWidth[9] = 12000;
-            worksheet.Cells.ColumnWidth[18] = 12000;
+            worksheet.Cells.ColumnWidth[10] = 12000;
 
-            worksheet.Cells[fila, columnaNroPromClientesSistema + 10] = new Cell("X");
-            worksheet.Cells.ColumnWidth[17] = 12000;
-            worksheet.Cells[fila, columnaNroPromClientesSistema + 11] = new Cell("Varianza de nro. prom. de clientes en sistema");
-            worksheet.Cells.ColumnWidth[17] = 12000;
+//            worksheet.Cells[fila, columnaNroPromClientesSistema + 10] = new Cell("X");
+//            worksheet.Cells.ColumnWidth[17] = 12000;
+//            worksheet.Cells[fila, columnaNroPromClientesSistema + 11] = new Cell("Varianza de nro. prom. de clientes en sistema");
             fila = 5;
         }
         private void tiempos()
@@ -195,8 +196,9 @@ namespace MM1
             worksheet.Cells[2, 0] = new Cell("Tiempo de asentamiento de la prob. de 1 cliente en el sistema: " + this.tiempoAsentamientoUnClienteSistema);
             Console.WriteLine("Bandas para el tiempo de asentamiento de la prob. de 1 cliente en el sistema: \u00B1{0}", this.valorPorcentajeTiempoAsentamiento.ToString("P"));
             worksheet.Cells[2, 2] = new Cell("Bandas para el tiempo de asentamiento de la prob. de 1 cliente en el sistema: \u00B1" + this.valorPorcentajeTiempoAsentamiento.ToString("P"));
-
-            this.calcularVarianza();    //Comentar para disminuir el tiempo de procesamiento
+            Console.WriteLine("Varianza del número promedio de clientes en el sistema: {0}", varianzaClientesSistema);
+            worksheet.Cells[2, 5] = new Cell("Varianza del número promedio de clientes en el sistema: " + varianzaClientesSistema.ToString());
+            //            this.calcularVarianza();    //Comentar para disminuir el tiempo de procesamiento
 
             workbook.Worksheets.Add(worksheet);
             workbook.Save(file);    //Crea el archivo
@@ -214,7 +216,9 @@ namespace MM1
                 this.nroPromedioClientesSistema += (this.reloj - this.tiempoUltimoEvento) * this.cantidadClientesSistema;   //Calcula número promedio de clientes en sistema                                              
                 this.cantidadClientesSistema += 1;  //Aumento el número de clientes en el sistema
 
-                this.tiempoUltimoEvento = this.reloj;   //Actualizo tiempo del último evento
+                this.calcularVarianzaNuevo();   //Calculo cuando cambia la cantidad de clientes en sistema
+
+                this.tiempoUltimoEvento = this.reloj;   //Actualizo tiempo del último evento              
             }
             else
             {
@@ -226,9 +230,11 @@ namespace MM1
                 this.cantidadClientesCola += 1; //Actualizo cantidad de clientes en cola
                 this.cantidadClientesSistema += 1; //Aumento el número de clientes en el sistema
                 this.cola.Enqueue((Arribo)this.listaProxEvento[(int)eventos.Arribo]);   //Agrego cliente a la cola
-                this.utilizacionDelServidor += (this.reloj - this.tiempoUltimoEvento);   //Actualizo tiempo de utilización del servidor
+                this.utilizacionDelServidor += (this.reloj - this.tiempoUltimoEvento);   //Actualizo tiempo de utilización del servidor    
 
-                this.tiempoUltimoEvento = reloj;    //Actualizo tiempo del último evento
+ //               this.calcularVarianzaNuevo();   //Calculo cuando cambia la cantidad de clientes en sistema
+
+                this.tiempoUltimoEvento = reloj;    //Actualizo tiempo del último evento            
             }
         }
         private void partida()
@@ -247,7 +253,10 @@ namespace MM1
                 this.cantidadClientesCola -= 1; //Disminuyo la cantidad de clientes en la cola
                 this.cantidadClientesSistema -= 1;  //Disminuyo la cantidad de clientes en el sistema
                 this.nroClientesAtendidos += 1; //Aumento el número de clientes atendidos/que completaron su demora
-                this.tiempoUltimoEvento = reloj;    //Actualizo tiempo del último evento
+
+                this.calcularVarianzaNuevo();   //Calculo cuando cambia la cantidad de clientes en sistema
+
+                this.tiempoUltimoEvento = reloj;    //Actualizo tiempo del último evento               
             }
             else
             {
@@ -259,7 +268,10 @@ namespace MM1
 
                 this.estadoServidor = estadoDelServidor.Desocupado; //Cambio el estado del servidor
                 this.cantidadClientesSistema -= 1;  //Disminuyo la cantidad de clientes en el sistema
-                this.tiempoUltimoEvento = reloj;    //Actualizo tiempo del último evento
+
+ //               this.calcularVarianzaNuevo();   //Calculo cuando cambia la cantidad de clientes en sistema
+
+                this.tiempoUltimoEvento = reloj;    //Actualizo tiempo del último evento              
             }
         }
         private void guardarDatos()
@@ -276,7 +288,7 @@ namespace MM1
 
             //E[X^2]    restarle E[X]^2, que sería: R6 - H6^2
             //            worksheet.Cells[fila, columnaNroPromClientesSistema + 10] = new Cell((this.nroPromedioClientesSistema * this.nroPromedioClientesSistema) / this.reloj);
-            worksheet.Cells[fila, columnaNroPromClientesSistema + 10] = new Cell((this.reloj - this.tiempoUltimoEvento) * this.cantidadClientesSistema);
+            //worksheet.Cells[fila, columnaNroPromClientesSistema + 10] = new Cell((this.reloj - this.tiempoUltimoEvento) * this.cantidadClientesSistema);
 
             //Probabilidad de que haya 1 cliente en el sistema
             //Tiempo en que hay 1 cliente en el sistema dividido el reloj de la simulación
@@ -295,7 +307,7 @@ namespace MM1
 
             fila++;
         }
-        private void calcularVarianza()
+        private void calcularVarianza() //Viejo, probablemente mal, no se usa
         {
             double varianza = 0;
             for (int i = 5; i < fila; i++)
@@ -306,9 +318,16 @@ namespace MM1
                     varianza += Math.Pow((double)worksheet.Cells[j, columnaNroPromClientesSistema + 10].Value - (double)worksheet.Cells[j, columnaNroPromClientesSistema].Value, 2);
                 }
                 varianza = varianza / j;
-                worksheet.Cells[i, 18] = new Cell(varianza);
+                worksheet.Cells[i, columnaVarianza] = new Cell(varianza);
             }
             Console.WriteLine("Varianza del número promedio de clientes en el sistema: {0}", varianza);
+        }
+
+        private void calcularVarianzaNuevo()
+        {
+            //Usa la fórmula varianza = sum (N_k - N_prom)^2 / tiempo ; N_k: nro. de cli. en sist. en tiempo k ; N_prom: nro. prom. de cli. en sist.          
+            varianzaClientesSistema += Math.Pow(this.cantidadClientesSistema - this.nroPromedioClientesSistema/this.reloj, 2)/this.reloj;
+            worksheet.Cells[fila, columnaVarianza] = new Cell(varianzaClientesSistema);            
         }
 
     }
