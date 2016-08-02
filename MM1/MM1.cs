@@ -9,6 +9,8 @@ namespace MM1
         private enum estadoDelServidor { Ocupado , Desocupado};
         private enum eventos { Arribo = 0 , Partida = 1 };
 
+        private int nroReplica;
+
         private double reloj;
         private double finSimulacion;
         private Evento[] listaProxEvento = new Evento[2];   //Uso la enumeración eventos como índice
@@ -55,6 +57,7 @@ namespace MM1
 
         public void programa()  //Programa principal
         {
+//            this.nroReplica = replica;
             this.inicializacion();
             while (this.reloj <= this.finSimulacion)
             {
@@ -70,7 +73,7 @@ namespace MM1
         }
 
         private void inicializacion()
-        {
+        {       
             this.reloj = 0;
             this.finSimulacion = 100000;
             this.lambda = 0.02;
@@ -113,7 +116,8 @@ namespace MM1
             columnaVarianza = 10;
 
             fila = 0;
-            file = "Simulacion.xls"; //Nombre del archivo
+            file = "Simulacion" + this.nroReplica + ".xls"; //Nombre del archivo
+
             workbook = new Workbook();
             worksheet = new Worksheet("Primer pagina");
             //Formato del archivo
@@ -186,6 +190,9 @@ namespace MM1
             double nroPromClientesSistema = this.nroPromedioClientesSistema / this.reloj;
             Console.WriteLine("Número promedio de clientes en el sistema: {0}", nroPromClientesSistema);
             worksheet.Cells[1, 5] = new Cell("Número promedio de clientes en el sistema: " + nroPromClientesSistema.ToString());
+            Console.WriteLine("Varianza del número de clientes en el sistema: {0}", varianzaClientesSistema / this.reloj);
+            double varianza = varianzaClientesSistema / this.reloj;
+            worksheet.Cells[2, 5] = new Cell("Varianza del número de clientes en el sistema: " + varianza.ToString());
             double nroPromClientesCola = this.nroPromedioClientesCola / this.reloj;
             Console.WriteLine("Número promedio de clientes en cola: {0}", nroPromClientesCola);
             worksheet.Cells[1, 6] = new Cell("Número promedio de clientes en cola: " + nroPromClientesCola.ToString());
@@ -195,9 +202,7 @@ namespace MM1
             Console.WriteLine("Tiempo de asentamiento de la prob. de 1 cliente en el sistema: {0}", this.tiempoAsentamientoUnClienteSistema);
             worksheet.Cells[2, 0] = new Cell("Tiempo de asentamiento de la prob. de 1 cliente en el sistema: " + this.tiempoAsentamientoUnClienteSistema);
             Console.WriteLine("Bandas para el tiempo de asentamiento de la prob. de 1 cliente en el sistema: \u00B1{0}", this.valorPorcentajeTiempoAsentamiento.ToString("P"));
-            worksheet.Cells[2, 2] = new Cell("Bandas para el tiempo de asentamiento de la prob. de 1 cliente en el sistema: \u00B1" + this.valorPorcentajeTiempoAsentamiento.ToString("P"));
-            Console.WriteLine("Varianza del número promedio de clientes en el sistema: {0}", varianzaClientesSistema);
-            worksheet.Cells[2, 5] = new Cell("Varianza del número promedio de clientes en el sistema: " + varianzaClientesSistema.ToString());
+            worksheet.Cells[2, 2] = new Cell("Bandas para el tiempo de asentamiento de la prob. de 1 cliente en el sistema: \u00B1" + this.valorPorcentajeTiempoAsentamiento.ToString("P"));            
             //            this.calcularVarianza();    //Comentar para disminuir el tiempo de procesamiento
 
             workbook.Worksheets.Add(worksheet);
@@ -326,8 +331,8 @@ namespace MM1
         private void calcularVarianzaNuevo()
         {
             //Usa la fórmula varianza = sum (N_k - N_prom)^2 / tiempo ; N_k: nro. de cli. en sist. en tiempo k ; N_prom: nro. prom. de cli. en sist.          
-            varianzaClientesSistema += Math.Pow(this.cantidadClientesSistema - this.nroPromedioClientesSistema/this.reloj, 2)/this.reloj;
-            worksheet.Cells[fila, columnaVarianza] = new Cell(varianzaClientesSistema);            
+            varianzaClientesSistema += Math.Pow(this.cantidadClientesSistema - this.nroPromedioClientesSistema/this.reloj, 2);
+            worksheet.Cells[fila, columnaVarianza] = new Cell(varianzaClientesSistema/this.reloj);            
         }
 
     }
