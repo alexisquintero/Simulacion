@@ -10,6 +10,7 @@ namespace MM1
         private enum eventos { Arribo = 0 , Partida = 1 };
 
         private int nroReplica;
+        private bool opcionConsola = false; //True: salidas en consola para cada corrida
 
         private double reloj;
         private double finSimulacion;
@@ -55,9 +56,9 @@ namespace MM1
         private int columnaProbabilidadUnClienteSistema;
         private int columnaVarianza;
 
-        public void programa()  //Programa principal
+        public void programa(int replica)  //Programa principal
         {
-//            this.nroReplica = replica;
+            this.nroReplica = replica;
             this.inicializacion();
             while (this.reloj <= this.finSimulacion)
             {
@@ -174,41 +175,47 @@ namespace MM1
         }
         private void reporte()
         {
-            Console.WriteLine("reloj: {0}", this.reloj);
+            
+            
             worksheet.Cells[1, 0] = new Cell("Reloj: " + this.reloj);
-            double utilizacionServidor = this.utilizacionDelServidor / this.finSimulacion;
-            Console.WriteLine("Utilización del servidor: {0}", utilizacionServidor );
+            double utilizacionServidor = this.utilizacionDelServidor / this.finSimulacion;           
             worksheet.Cells[1, 1] = new Cell("Utilización del servidor: " + utilizacionServidor.ToString());
-            double tiempoPromCola = this.deltaClientesEnCola / this.nroClientesAtendidos;
-            Console.WriteLine("Tiempo promedio en cola : {0}", tiempoPromCola);
+            double tiempoPromCola = this.deltaClientesEnCola / this.nroClientesAtendidos;            
             worksheet.Cells[1, 2] = new Cell("Tiempo promedio en cola : " + tiempoPromCola.ToString());
-            double tiempoPromSistema = this.deltaClientesEnSistema / this.nroClientesAtendidos;
-            Console.WriteLine("Tiempo promedio en el sistema: {0}", tiempoPromSistema);
-            worksheet.Cells[1, 3] = new Cell("Tiempo promedio en el sistema: " + tiempoPromSistema.ToString());
-            Console.WriteLine("Clientes atendidos: {0}", this.nroClientesAtendidos);
+            double tiempoPromSistema = this.deltaClientesEnSistema / this.nroClientesAtendidos;           
+            worksheet.Cells[1, 3] = new Cell("Tiempo promedio en el sistema: " + tiempoPromSistema.ToString());          
             worksheet.Cells[1, 4] = new Cell("Clientes atendidos: " + this.nroClientesAtendidos.ToString());
-            double nroPromClientesSistema = this.nroPromedioClientesSistema / this.reloj;
-            Console.WriteLine("Número promedio de clientes en el sistema: {0}", nroPromClientesSistema);
-            worksheet.Cells[1, 5] = new Cell("Número promedio de clientes en el sistema: " + nroPromClientesSistema.ToString());
-            Console.WriteLine("Varianza del número de clientes en el sistema: {0}", varianzaClientesSistema / this.reloj);
+            double nroPromClientesSistema = this.nroPromedioClientesSistema / this.reloj;           
+            worksheet.Cells[1, 5] = new Cell("Número promedio de clientes en el sistema: " + nroPromClientesSistema.ToString());           
             double varianza = varianzaClientesSistema / this.reloj;
             worksheet.Cells[2, 5] = new Cell("Varianza del número de clientes en el sistema: " + varianza.ToString());
-            double nroPromClientesCola = this.nroPromedioClientesCola / this.reloj;
-            Console.WriteLine("Número promedio de clientes en cola: {0}", nroPromClientesCola);
+            double nroPromClientesCola = this.nroPromedioClientesCola / this.reloj;          
             worksheet.Cells[1, 6] = new Cell("Número promedio de clientes en cola: " + nroPromClientesCola.ToString());
-            double probUnClienteSistema = this.tiempoSoloUnClienteSistema / this.reloj;
-            Console.WriteLine("Probabilidad de que haya 1 cliente en el sistema: {0}", probUnClienteSistema);
-            worksheet.Cells[1, 7] = new Cell("Probabilidad de que haya 1 cliente en el sistema: " + probUnClienteSistema.ToString());
-            Console.WriteLine("Tiempo de asentamiento de la prob. de 1 cliente en el sistema: {0}", this.tiempoAsentamientoUnClienteSistema);
-            worksheet.Cells[2, 0] = new Cell("Tiempo de asentamiento de la prob. de 1 cliente en el sistema: " + this.tiempoAsentamientoUnClienteSistema);
-            Console.WriteLine("Bandas para el tiempo de asentamiento de la prob. de 1 cliente en el sistema: \u00B1{0}", this.valorPorcentajeTiempoAsentamiento.ToString("P"));
+            double probUnClienteSistema = this.tiempoSoloUnClienteSistema / this.reloj;            
+            worksheet.Cells[1, 7] = new Cell("Probabilidad de que haya 1 cliente en el sistema: " + probUnClienteSistema.ToString());           
+            worksheet.Cells[2, 0] = new Cell("Tiempo de asentamiento de la prob. de 1 cliente en el sistema: " + this.tiempoAsentamientoUnClienteSistema);           
             worksheet.Cells[2, 2] = new Cell("Bandas para el tiempo de asentamiento de la prob. de 1 cliente en el sistema: \u00B1" + this.valorPorcentajeTiempoAsentamiento.ToString("P"));            
-            //            this.calcularVarianza();    //Comentar para disminuir el tiempo de procesamiento
 
             workbook.Worksheets.Add(worksheet);
             workbook.Save(file);    //Crea el archivo
 
-            Console.Read();
+            if (opcionConsola)
+            {
+                Console.WriteLine("reloj: {0}", this.reloj);
+                Console.WriteLine("Utilización del servidor: {0}", utilizacionServidor);
+                Console.WriteLine("Tiempo promedio en cola : {0}", tiempoPromCola);
+                Console.WriteLine("Tiempo promedio en el sistema: {0}", tiempoPromSistema);
+                Console.WriteLine("Clientes atendidos: {0}", this.nroClientesAtendidos);
+                Console.WriteLine("Número promedio de clientes en el sistema: {0}", nroPromClientesSistema);
+                Console.WriteLine("Varianza del número de clientes en el sistema: {0}", varianzaClientesSistema / this.reloj);
+                Console.WriteLine("Número promedio de clientes en cola: {0}", nroPromClientesCola);
+                Console.WriteLine("Probabilidad de que haya 1 cliente en el sistema: {0}", probUnClienteSistema);
+                Console.WriteLine("Tiempo de asentamiento de la prob. de 1 cliente en el sistema: {0}", this.tiempoAsentamientoUnClienteSistema);
+                Console.WriteLine("Bandas para el tiempo de asentamiento de la prob. de 1 cliente en el sistema: \u00B1{0}", this.valorPorcentajeTiempoAsentamiento.ToString("P"));
+
+                Console.Read();
+            }
+           
         }
         private void arribo()
         {
@@ -291,10 +298,6 @@ namespace MM1
             worksheet.Cells[fila, columnaNroPromClientesSistema] = new Cell(this.nroPromedioClientesSistema / this.reloj);
             worksheet.Cells[fila, columnaNroPromClientesCola] = new Cell(this.nroPromedioClientesCola / this.reloj);
 
-            //E[X^2]    restarle E[X]^2, que sería: R6 - H6^2
-            //            worksheet.Cells[fila, columnaNroPromClientesSistema + 10] = new Cell((this.nroPromedioClientesSistema * this.nroPromedioClientesSistema) / this.reloj);
-            //worksheet.Cells[fila, columnaNroPromClientesSistema + 10] = new Cell((this.reloj - this.tiempoUltimoEvento) * this.cantidadClientesSistema);
-
             //Probabilidad de que haya 1 cliente en el sistema
             //Tiempo en que hay 1 cliente en el sistema dividido el reloj de la simulación
             double probabilidadUnClienteSistema = this.tiempoSoloUnClienteSistema / this.reloj;
@@ -311,21 +314,6 @@ namespace MM1
             }
 
             fila++;
-        }
-        private void calcularVarianza() //Viejo, probablemente mal, no se usa
-        {
-            double varianza = 0;
-            for (int i = 5; i < fila; i++)
-            {                
-                int j = 0;
-                for (j = 5; j <= i; j++)
-                {
-                    varianza += Math.Pow((double)worksheet.Cells[j, columnaNroPromClientesSistema + 10].Value - (double)worksheet.Cells[j, columnaNroPromClientesSistema].Value, 2);
-                }
-                varianza = varianza / j;
-                worksheet.Cells[i, columnaVarianza] = new Cell(varianza);
-            }
-            Console.WriteLine("Varianza del número promedio de clientes en el sistema: {0}", varianza);
         }
 
         private void calcularVarianzaNuevo()
